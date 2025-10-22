@@ -1,0 +1,6 @@
+[package]
+name = "supermarket_together_pricing_accessibility"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
