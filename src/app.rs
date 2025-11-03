@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::ops::{Add, AddAssign};
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Copy, Clone, Default)]
 pub enum Digit {
@@ -86,17 +87,6 @@ pub struct Price {
   pub decimal_part: Option<DecimalPart>,
 }
 
-#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default)]
-pub struct DecimalPart {
-  pub first_decimal_digit: Option<FirstDecimalDigit>,
-}
-
-#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default)]
-pub struct FirstDecimalDigit {
-  pub digit: Digit,
-  pub second_decimal_digit: Option<Digit>,
-}
-
 impl Price {
   pub fn add<I>(&mut self, input: I)
   where
@@ -109,7 +99,32 @@ impl Price {
   where
     I: Into<Input>,
   {
-    todo!("add input if possible")
+    let input = input.into();
+    match input {
+      Input::Digit(digit) => {
+        if let Some(decimal_part) = &mut self.decimal_part {
+          if let Some(first_decimal_digit) = &mut decimal_part.first_decimal_digit {
+            if first_decimal_digit.second_decimal_digit.is_some() {
+              return Err(AddInputError::MoreThanTwoDecimalPlaces);
+            } else {
+              first_decimal_digit.second_decimal_digit = Some(digit);
+            }
+          } else {
+            decimal_part.first_decimal_digit = Some(FirstDecimalDigit::from(digit))
+          }
+        } else {
+          self.value.push(digit);
+        }
+      }
+      Input::Decimal => {
+        if self.decimal_part.is_some() {
+          return Err(AddInputError::DecimalAlreadyPresent);
+        } else {
+          self.decimal_part = Some(DecimalPart::default());
+        }
+      }
+    }
+    Ok(())
   }
 
   pub fn as_inputs(&self) -> Vec<Input> {
@@ -123,11 +138,10 @@ impl Price {
           .iter()
           .flat_map(|first_decimal_digit| {
             [Input::Decimal, Input::from(first_decimal_digit.digit)]
-              .iter()
+              .into_iter()
               .chain(
                 first_decimal_digit
                   .second_decimal_digit
-                  .iter()
                   .map(|digit| Input::from(*digit)),
               )
           })
@@ -136,11 +150,70 @@ impl Price {
   }
 
   pub fn as_cents(&self) -> u32 {
-    todo!("convert price to cents")
+    let mut value = self
+      .value
+      .iter()
+      .fold(0, |cents, digit| cents * 10 + digit.into() * 100);
+    if let Some(decimal_part) = &self.decimal_part {
+      if let Some(first_decimal_digit) = &decimal_part.first_decimal_digit {
+        value += first_decimal_digit.digit.into() * 10;
+        if let Some(second_decimal_digit) = first_decimal_digit.second_decimal_digit {
+          value += second_decimal_digit.into();
+        }
+      }
+    }
+    value
   }
 
-  pub fn from_cents(cents: u32) -> Self {
-    todo!("calculate price from cents")
+  pub fn from_cents(mut cents: u32) -> Self {
+    let mut inverse_inputs = vec![];
+    while cents > 0 {
+      if inverse_inputs.len() == 2 {
+        inverse_inputs.push(Input::Decimal);
+      }
+      inverse_inputs.push(Digit::try_from(cents % 10).expect("valid digit").into());
+      cents /= 10;
+    }
+
+    let mut price = Price::default();
+    for input in inverse_inputs.into_iter().rev() {
+      price += input;
+    }
+
+    price
+  }
+}
+
+impl <I> Add<I> for Price where I: Into<Input> {
+  type Output = Self;
+
+  fn add(mut self, rhs: I) -> Self::Output {
+    Price::add(&mut self, rhs);
+    self
+  }
+}
+
+impl <I> AddAssign<I> for Price where I: Into<Input> {
+  fn add_assign(&mut self, rhs: I) {
+    Price::add(self, rhs);
+  }
+}
+
+impl From<Price> for u32 {
+  fn from(value: Price) -> Self {
+    value.as_cents()
+  }
+}
+
+impl From<u32> for Price {
+  fn from(value: u32) -> Self {
+    Self::from_cents(value)
+  }
+}
+
+impl Display for Price {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.as_inputs().into_iter().map(|input| input.to_string()).collect())
   }
 }
 
@@ -164,3 +237,28 @@ impl Display for AddInputError {
 }
 
 impl Error for AddInputError {}
+
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default)]
+pub struct DecimalPart {
+  pub first_decimal_digit: Option<FirstDecimalDigit>,
+}
+
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default)]
+pub struct FirstDecimalDigit {
+  pub digit: Digit,
+  pub second_decimal_digit: Option<Digit>,
+}
+
+impl From<Digit> for FirstDecimalDigit {
+  fn from(digit: Digit) -> Self {
+    Self {
+      digit,
+      second_decimal_digit: None,
+    }
+  }
+}
+
+#[cfg(test)]
+mod test_price {
+  //TODO test all the functions
+}
