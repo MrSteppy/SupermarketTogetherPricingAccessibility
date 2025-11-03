@@ -39,6 +39,12 @@ impl Keyboard {
     Ok(())
   }
 
+  pub fn type_numpad_enter(&mut self) -> Result<(), String> {
+    enigo::Keyboard::key(&mut self.enigo, Key::NumpadEnter, Direction::Click)
+      .map_err(|e| format!("failed to type enter: {e}"))?;
+    Ok(())
+  }
+
   pub fn type_0_42_on_numpad(&mut self) -> Result<(), String> {
     for key in [
       Key::Numpad0,
