@@ -184,7 +184,10 @@ impl Price {
   }
 }
 
-impl <I> Add<I> for Price where I: Into<Input> {
+impl<I> Add<I> for Price
+where
+  I: Into<Input>,
+{
   type Output = Self;
 
   fn add(mut self, rhs: I) -> Self::Output {
@@ -193,7 +196,10 @@ impl <I> Add<I> for Price where I: Into<Input> {
   }
 }
 
-impl <I> AddAssign<I> for Price where I: Into<Input> {
+impl<I> AddAssign<I> for Price
+where
+  I: Into<Input>,
+{
   fn add_assign(&mut self, rhs: I) {
     Price::add(self, rhs);
   }
@@ -213,7 +219,15 @@ impl From<u32> for Price {
 
 impl Display for Price {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.as_inputs().into_iter().map(|input| input.to_string()).collect())
+    write!(
+      f,
+      "{}",
+      self
+        .as_inputs()
+        .into_iter()
+        .map(|input| input.to_string())
+        .collect()
+    )
   }
 }
 
@@ -260,5 +274,36 @@ impl From<Digit> for FirstDecimalDigit {
 
 #[cfg(test)]
 mod test_price {
-  //TODO test all the functions
+  use crate::app::{AddInputError, Digit, Input, Price};
+
+  macro_rules! assert_no_price_change {
+    ($price: ident, $operation: expr) => {{
+      let old_price = $price.clone();
+      $operation
+      assert_eq!(old_price, price);
+    }};
+  }
+
+  #[test]
+  fn test_try_add() {
+    let mut price = Price::default();
+
+    macro_rules! assert_invariant_decimal_addition {
+      () => {
+        assert_no_price_change!(price, assert_eq!(
+          Err(AddInputError::DecimalAlreadyPresent),
+          price.try_add(Input::Decimal)
+        ));
+      };
+    }
+
+    price.try_add(Digit::Zero).expect("add zero");
+    price.try_add(Input::Decimal).expect("add decimal");
+    assert_invariant_decimal_addition!();
+    price.try_add(Digit::Four).expect("add four");
+    assert_invariant_decimal_addition!();
+    price.try_add(Digit::Two).expect("add two");
+    assert_invariant_decimal_addition!();
+    assert_no_price_change!(price, assert_eq!(Err(AddInputError::MoreThanTwoDecimalPlaces), price.try_add(Digit::Zero)));
+  }
 }
