@@ -1,6 +1,8 @@
+pub mod keyboard;
+
 use std::num::NonZeroU32;
 
-const FIVE: NonZeroU32 = NonZeroU32::new(5).expect("not zero");
+pub const FIVE: NonZeroU32 = NonZeroU32::new(5).expect("not zero");
 
 #[inline]
 pub fn double(cents: u32) -> u32 {
