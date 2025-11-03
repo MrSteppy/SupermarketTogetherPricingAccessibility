@@ -1,4 +1,5 @@
 pub mod keyboard;
+pub mod app;
 
 use std::num::NonZeroU32;
 
