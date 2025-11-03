@@ -1,5 +1,6 @@
 pub mod keyboard;
-pub mod app;
+pub mod input;
+pub mod price;
 
 use std::num::NonZeroU32;
 
