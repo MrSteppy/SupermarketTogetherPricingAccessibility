@@ -18,5 +18,7 @@ Then send the corresponding numpad inputs to your computer.
 
 ## Usage
 
-This project is still in early development and missing many
-core features. Once that changes, this section will be updated. 
+Run the executable from a terminal and use the regular num-keys, the comma key and regular enter to type in a price.
+You can type in a price from any window.
+The software will automatically double that, round it down to the next five cents and enter that via your numpad. 
+To stop the program, just interrupt it. 
