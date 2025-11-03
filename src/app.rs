@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::ops::{Add, AddAssign};
+use std::ops::{Add, AddAssign, Mul};
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Copy, Clone, Default)]
 pub enum Digit {
@@ -15,6 +15,37 @@ pub enum Digit {
   Seven,
   Eight,
   Nine,
+}
+
+impl Digit {
+  pub fn as_char(&self) -> char {
+    match self {
+      Digit::Zero => '0',
+      Digit::One => '1',
+      Digit::Two => '2',
+      Digit::Three => '3',
+      Digit::Four => '4',
+      Digit::Five => '5',
+      Digit::Six => '6',
+      Digit::Seven => '7',
+      Digit::Eight => '8',
+      Digit::Nine => '9',
+    }
+  }
+}
+
+impl Mul<u32> for Digit {
+  type Output = u32;
+
+  fn mul(self, rhs: u32) -> Self::Output {
+    Self::Output::from(self) * rhs
+  }
+}
+
+impl AddAssign<Digit> for u32 {
+  fn add_assign(&mut self, rhs: Digit) {
+    Self::add_assign(self, Self::from(rhs));
+  }
 }
 
 impl From<Digit> for u32 {
@@ -49,14 +80,14 @@ impl TryFrom<u32> for Digit {
       7 => Digit::Seven,
       8 => Digit::Eight,
       9 => Digit::Nine,
-      _ => Err("invalid digit value")?,
+      _ => return Err("invalid digit value"),
     })
   }
 }
 
 impl Display for Digit {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    u32::from(*self).fmt(f)
+    write!(f, "{}", self.as_char())
   }
 }
 
@@ -72,12 +103,18 @@ impl From<Digit> for Input {
   }
 }
 
+impl Input {
+  pub fn as_char(&self) -> char {
+    match self {
+      Input::Digit(digit) => digit.as_char(),
+      Input::Decimal => '.',
+    }
+  }
+}
+
 impl Display for Input {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Input::Digit(digit) => digit.fmt(f),
-      Input::Decimal => write!(f, "."),
-    }
+    write!(f, "{}", self.as_char())
   }
 }
 
@@ -128,37 +165,36 @@ impl Price {
   }
 
   pub fn as_inputs(&self) -> Vec<Input> {
-    self
-      .value
-      .iter()
-      .map(|digit| Input::from(*digit))
-      .chain(self.decimal_part.iter().flat_map(|decimal_part| {
-        decimal_part
-          .first_decimal_digit
-          .iter()
-          .flat_map(|first_decimal_digit| {
-            [Input::Decimal, Input::from(first_decimal_digit.digit)]
-              .into_iter()
-              .chain(
-                first_decimal_digit
-                  .second_decimal_digit
-                  .map(|digit| Input::from(*digit)),
-              )
-          })
-      }))
-      .collect()
+    let mut inputs = vec![];
+    if self.value.is_empty() {
+      inputs.push(Input::from(Digit::Zero));
+    } else {
+      inputs.append(&mut self.value.iter().map(|digit| Input::from(*digit)).collect());
+    }
+
+    if let Some(decimal_part) = &self.decimal_part {
+      if let Some(first_decimal_digit) = &decimal_part.first_decimal_digit {
+        inputs.push(Input::Decimal);
+        inputs.push(Input::from(first_decimal_digit.digit));
+        if let Some(second_decimal_digit) = first_decimal_digit.second_decimal_digit {
+          inputs.push(Input::from(second_decimal_digit));
+        }
+      }
+    }
+
+    inputs
   }
 
   pub fn as_cents(&self) -> u32 {
     let mut value = self
       .value
       .iter()
-      .fold(0, |cents, digit| cents * 10 + digit.into() * 100);
+      .fold(0, |cents, &digit| cents * 10 + digit * 100);
     if let Some(decimal_part) = &self.decimal_part {
       if let Some(first_decimal_digit) = &decimal_part.first_decimal_digit {
-        value += first_decimal_digit.digit.into() * 10;
+        value += first_decimal_digit.digit * 10;
         if let Some(second_decimal_digit) = first_decimal_digit.second_decimal_digit {
-          value += second_decimal_digit.into();
+          value += second_decimal_digit;
         }
       }
     }
@@ -168,11 +204,12 @@ impl Price {
   pub fn from_cents(mut cents: u32) -> Self {
     let mut inverse_inputs = vec![];
     while cents > 0 {
+      inverse_inputs.push(Digit::try_from(cents % 10).expect("valid digit").into());
+      cents /= 10;
+
       if inverse_inputs.len() == 2 {
         inverse_inputs.push(Input::Decimal);
       }
-      inverse_inputs.push(Digit::try_from(cents % 10).expect("valid digit").into());
-      cents /= 10;
     }
 
     let mut price = Price::default();
@@ -225,13 +262,13 @@ impl Display for Price {
       self
         .as_inputs()
         .into_iter()
-        .map(|input| input.to_string())
-        .collect()
+        .map(|input| input.as_char())
+        .collect::<String>()
     )
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AddInputError {
   DecimalAlreadyPresent,
   MoreThanTwoDecimalPlaces,
@@ -274,13 +311,13 @@ impl From<Digit> for FirstDecimalDigit {
 
 #[cfg(test)]
 mod test_price {
-  use crate::app::{AddInputError, Digit, Input, Price};
+  use crate::app::{AddInputError, DecimalPart, Digit, FirstDecimalDigit, Input, Price};
 
   macro_rules! assert_no_price_change {
     ($price: ident, $operation: expr) => {{
       let old_price = $price.clone();
-      $operation
-      assert_eq!(old_price, price);
+      $operation;
+      assert_eq!(old_price, $price);
     }};
   }
 
@@ -290,20 +327,147 @@ mod test_price {
 
     macro_rules! assert_invariant_decimal_addition {
       () => {
-        assert_no_price_change!(price, assert_eq!(
-          Err(AddInputError::DecimalAlreadyPresent),
-          price.try_add(Input::Decimal)
-        ));
+        assert_no_price_change!(
+          price,
+          assert_eq!(
+            Err(AddInputError::DecimalAlreadyPresent),
+            price.try_add(Input::Decimal)
+          )
+        );
       };
     }
 
     price.try_add(Digit::Zero).expect("add zero");
+    assert_eq!(
+      Price {
+        value: vec![Digit::Zero],
+        decimal_part: None,
+      },
+      price
+    );
     price.try_add(Input::Decimal).expect("add decimal");
+    assert_eq!(
+      Price {
+        value: vec![Digit::Zero],
+        decimal_part: Some(DecimalPart::default()),
+      },
+      price
+    );
     assert_invariant_decimal_addition!();
     price.try_add(Digit::Four).expect("add four");
+    assert_eq!(
+      Price {
+        value: vec![Digit::Zero],
+        decimal_part: Some(DecimalPart {
+          first_decimal_digit: Some(FirstDecimalDigit {
+            digit: Digit::Four,
+            second_decimal_digit: None
+          }),
+        }),
+      },
+      price
+    );
     assert_invariant_decimal_addition!();
     price.try_add(Digit::Two).expect("add two");
+    assert_eq!(
+      Price {
+        value: vec![Digit::Zero],
+        decimal_part: Some(DecimalPart {
+          first_decimal_digit: Some(FirstDecimalDigit {
+            digit: Digit::Four,
+            second_decimal_digit: Some(Digit::Two),
+          }),
+        }),
+      },
+      price
+    );
     assert_invariant_decimal_addition!();
-    assert_no_price_change!(price, assert_eq!(Err(AddInputError::MoreThanTwoDecimalPlaces), price.try_add(Digit::Zero)));
+    assert_no_price_change!(
+      price,
+      assert_eq!(
+        Err(AddInputError::MoreThanTwoDecimalPlaces),
+        price.try_add(Digit::Zero)
+      )
+    );
+  }
+
+  #[test]
+  fn test_as_inputs() {
+    assert_eq!(
+      vec![
+        Input::from(Digit::Zero),
+        Input::Decimal,
+        Input::from(Digit::Four),
+        Input::from(Digit::Two)
+      ],
+      Price {
+        value: vec![],
+        decimal_part: Some(DecimalPart {
+          first_decimal_digit: Some(FirstDecimalDigit {
+            digit: Digit::Four,
+            second_decimal_digit: Some(Digit::Two)
+          }),
+        }),
+      }
+      .as_inputs()
+    );
+  }
+
+  #[test]
+  fn test_as_cents() {
+    assert_eq!(
+      42,
+      Price {
+        value: vec![],
+        decimal_part: Some(DecimalPart {
+          first_decimal_digit: Some(FirstDecimalDigit {
+            digit: Digit::Four,
+            second_decimal_digit: Some(Digit::Two)
+          })
+        })
+      }
+      .as_cents()
+    );
+    assert_eq!(
+      2830,
+      Price {
+        value: vec![Digit::Two, Digit::Eight],
+        decimal_part: Some(DecimalPart {
+          first_decimal_digit: Some(FirstDecimalDigit {
+            digit: Digit::Three,
+            second_decimal_digit: None,
+          })
+        })
+      }
+      .as_cents()
+    );
+  }
+
+  #[test]
+  fn test_from_cents() {
+    assert_eq!(
+      Price {
+        value: vec![],
+        decimal_part: Some(DecimalPart {
+          first_decimal_digit: Some(FirstDecimalDigit {
+            digit: Digit::Four,
+            second_decimal_digit: Some(Digit::Two)
+          })
+        })
+      },
+      Price::from_cents(42)
+    );
+    assert_eq!(
+      Price {
+        value: vec![Digit::Two, Digit::Eight],
+        decimal_part: Some(DecimalPart {
+          first_decimal_digit: Some(FirstDecimalDigit {
+            digit: Digit::Three,
+            second_decimal_digit: Some(Digit::Zero),
+          })
+        })
+      },
+      Price::from_cents(2830)
+    );
   }
 }
