@@ -1,4 +1,4 @@
-use crate::input::{Digit, Character};
+use crate::input::{Character, Digit, Input};
 use enigo::{Direction, Enigo, Key, Settings};
 use std::thread::sleep;
 use std::time::Duration;
@@ -16,33 +16,35 @@ impl Keyboard {
 
   pub fn type_on_numpad<I>(&mut self, input: I) -> Result<(), String>
   where
-    I: Into<Character>,
+    I: Into<Input>,
   {
     let input = input.into();
     let key = match input {
-      Character::Digit(digit) => match digit {
-        Digit::Zero => Key::Numpad0,
-        Digit::One => Key::Numpad1,
-        Digit::Two => Key::Numpad2,
-        Digit::Three => Key::Numpad3,
-        Digit::Four => Key::Numpad4,
-        Digit::Five => Key::Numpad5,
-        Digit::Six => Key::Numpad6,
-        Digit::Seven => Key::Numpad7,
-        Digit::Eight => Key::Numpad8,
-        Digit::Nine => Key::Numpad9,
+      Input::Char(c) => match c {
+        Character::Digit(digit) => match digit {
+          Digit::Zero => Key::Numpad0,
+          Digit::One => Key::Numpad1,
+          Digit::Two => Key::Numpad2,
+          Digit::Three => Key::Numpad3,
+          Digit::Four => Key::Numpad4,
+          Digit::Five => Key::Numpad5,
+          Digit::Six => Key::Numpad6,
+          Digit::Seven => Key::Numpad7,
+          Digit::Eight => Key::Numpad8,
+          Digit::Nine => Key::Numpad9,
+        },
+        Character::Decimal => Key::Decimal,
       },
-      Character::Decimal => Key::Decimal,
+      Input::Enter => Key::NumpadEnter,
     };
     enigo::Keyboard::key(&mut self.enigo, key, Direction::Click)
-      .map_err(|e| format!("failed to type {input}: {e}"))?;
+      .map_err(|e| format!("failed to type {:?}: {e}", input))?;
     Ok(())
   }
 
+  #[deprecated]
   pub fn type_numpad_enter(&mut self) -> Result<(), String> {
-    enigo::Keyboard::key(&mut self.enigo, Key::NumpadEnter, Direction::Click)
-      .map_err(|e| format!("failed to type enter: {e}"))?;
-    Ok(())
+    self.type_on_numpad(Input::Enter)
   }
 
   pub fn type_0_42_on_numpad(&mut self) -> Result<(), String> {

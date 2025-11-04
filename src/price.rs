@@ -10,19 +10,19 @@ pub struct Price {
 }
 
 impl Price {
-  pub fn add<I>(&mut self, input: I)
+  pub fn add<I>(&mut self, char: I)
   where
     I: Into<Character>,
   {
-    let _ = self.try_add(input);
+    let _ = self.try_add(char);
   }
 
-  pub fn try_add<I>(&mut self, input: I) -> Result<(), AddInputError>
+  pub fn try_add<I>(&mut self, char: I) -> Result<(), AddInputError>
   where
     I: Into<Character>,
   {
-    let input = input.into();
-    match input {
+    let char = char.into();
+    match char {
       Character::Digit(digit) => {
         if let Some(decimal_part) = &mut self.decimal_part {
           if let Some(first_decimal_digit) = &mut decimal_part.first_decimal_digit {

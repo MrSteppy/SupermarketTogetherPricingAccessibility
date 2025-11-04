@@ -116,3 +116,21 @@ impl Display for Character {
     write!(f, "{}", self.as_char())
   }
 }
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum Input {
+  Char(Character),
+  Enter,
+}
+
+impl From<Character> for Input {
+  fn from(value: Character) -> Self {
+    Self::Char(value)
+  }
+}
+
+impl From<Digit> for Input {
+  fn from(value: Digit) -> Self {
+    Self::from(Character::from(value))
+  }
+}
