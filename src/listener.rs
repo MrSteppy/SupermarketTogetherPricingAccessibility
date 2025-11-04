@@ -1,6 +1,10 @@
 use crate::input::Input;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
+use std::thread;
+use std::time::Duration;
+use device_query::DeviceEventsHandler;
+use crossterm::event::{Event, KeyCode};
 
 pub fn listen() -> Result<Receiver<Input>, String> {
   let (sender, receiver) = mpsc::channel();
@@ -30,7 +34,11 @@ pub fn listen() -> Result<Receiver<Input>, String> {
 
   #[cfg(not(feature = "rdev"))]
   {
-    crossterm::terminal::enable_raw_mode().map_err(|e| format!("{e}"))?;
+    let event_state = DeviceEventsHandler::new(Duration::from_millis(10)).ok_or("failed to setup event loop")?;
+
+    thread::spawn(move || loop {
+
+    });
     
     todo!("listen for key events")
   }
