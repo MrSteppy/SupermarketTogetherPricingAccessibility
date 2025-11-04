@@ -1,7 +1,5 @@
 use crate::input::{Character, Digit, Input};
 use enigo::{Direction, Enigo, Key, Settings};
-use std::thread::sleep;
-use std::time::Duration;
 
 #[derive(Debug)]
 pub struct Keyboard {
@@ -39,25 +37,6 @@ impl Keyboard {
     };
     enigo::Keyboard::key(&mut self.enigo, key, Direction::Click)
       .map_err(|e| format!("failed to type {:?}: {e}", input))?;
-    Ok(())
-  }
-
-  #[deprecated]
-  pub fn type_numpad_enter(&mut self) -> Result<(), String> {
-    self.type_on_numpad(Input::Enter)
-  }
-
-  pub fn type_0_42_on_numpad(&mut self) -> Result<(), String> {
-    for key in [
-      Key::Numpad0,
-      Key::Decimal,
-      Key::Numpad4,
-      Key::Numpad2,
-      Key::NumpadEnter,
-    ] {
-      enigo::Keyboard::key(&mut self.enigo, key, Direction::Click).map_err(|e| format!("{e}"))?;
-      sleep(Duration::from_millis(100));
-    }
     Ok(())
   }
 }

@@ -1,7 +1,7 @@
 use rdev::{EventType, Key};
 use std::thread::sleep;
 use std::time::Duration;
-use supermarket_together_pricing_accessibility::input::{Digit, Character};
+use supermarket_together_pricing_accessibility::input::{Digit, Character, Input};
 use supermarket_together_pricing_accessibility::keyboard::Keyboard;
 use supermarket_together_pricing_accessibility::price::Price;
 use supermarket_together_pricing_accessibility::{double, round_down, FIVE};
@@ -43,7 +43,7 @@ fn run() {
             sleep(Duration::from_millis(100));
           }
           //enter new price
-          keyboard.type_numpad_enter().expect("type enter");
+          keyboard.type_on_numpad(Input::Enter).expect("type enter");
 
           //reset price
           price = Price::default();
