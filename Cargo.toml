@@ -8,3 +8,7 @@ edition = "2024"
 # need to use the version from git since the crates version is not updated yet
 enigo = { git = "https://github.com/enigo-rs/enigo.git" }
 rdev = "0.5"
+crossterm = "0.29"
+
+[features]
+rdev = []
