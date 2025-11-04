@@ -1,10 +1,12 @@
-use rdev::{EventType, Key};
 use std::thread::sleep;
 use std::time::Duration;
-use supermarket_together_pricing_accessibility::input::{Digit, Character, Input};
+use supermarket_together_pricing_accessibility::input::Input;
 use supermarket_together_pricing_accessibility::keyboard::Keyboard;
+use supermarket_together_pricing_accessibility::listener::listen;
 use supermarket_together_pricing_accessibility::price::Price;
 use supermarket_together_pricing_accessibility::{double, round_down, FIVE};
+
+const TYPING_DELAY: Duration = Duration::from_millis(100); 
 
 fn main() {
   run();
@@ -17,42 +19,34 @@ fn run() {
 
   let mut price = Price::default();
   let mut keyboard = Keyboard::new().expect("keyboard");
-  rdev::listen(move |event| {
-    if let EventType::KeyPress(key) = event.event_type {
-      let input = match key {
-        Key::Num1 => Digit::One.into(),
-        Key::Num2 => Digit::Two.into(),
-        Key::Num3 => Digit::Three.into(),
-        Key::Num4 => Digit::Four.into(),
-        Key::Num5 => Digit::Five.into(),
-        Key::Num6 => Digit::Six.into(),
-        Key::Num7 => Digit::Seven.into(),
-        Key::Num8 => Digit::Eight.into(),
-        Key::Num9 => Digit::Nine.into(),
-        Key::Num0 => Digit::Zero.into(),
-        Key::Comma | Key::Dot => Character::Decimal,
-        Key::Return => {
-          let cents = price.as_cents();
-          let new_cents = round_down(double(cents), FIVE);
-          let new_price = Price::from(new_cents);
+  let input_receiver = listen().expect("failed to setup listener");
+  
+  while let Ok(input) = input_receiver.recv() {
+    match input {
+      Input::Char(char) => price += char,
+      Input::Enter => {
+        let new_price = double_and_round(&price);
 
-          println!("${price} → ${new_price}");
+        println!("${price} → ${new_price}");
 
-          for input in new_price.as_inputs() {
-            keyboard.type_on_numpad(input).expect(&format!("type {input}"));
-            sleep(Duration::from_millis(100));
-          }
-          //enter new price
-          keyboard.type_on_numpad(Input::Enter).expect("type enter");
+        //type in new price on numpad
+        for char in new_price.as_inputs() {
+          keyboard.type_on_numpad(char).expect(&format!("type {char}"));
+          sleep(TYPING_DELAY);
+        }
+        keyboard.type_on_numpad(Input::Enter).expect("type enter");
 
-          //reset price
-          price = Price::default();
-          return
-        },
-        _ => return,
-      };
-      price += input;
+        //reset price
+        price = Price::default();
+      }
     }
-  })
-  .expect("failed to setup key listener");
+  }
+}
+
+fn double_and_round(price: &Price) -> Price {
+  let cents = price.as_cents();
+  let double = double(cents);
+  let rounded = round_down(double, FIVE);
+  let price = Price::from(rounded);
+  price
 }
