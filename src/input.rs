@@ -91,27 +91,27 @@ impl Display for Digit {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum Input {
+pub enum Character {
   Digit(Digit),
   Decimal,
 }
 
-impl From<Digit> for Input {
+impl From<Digit> for Character {
   fn from(value: Digit) -> Self {
-    Input::Digit(value)
+    Character::Digit(value)
   }
 }
 
-impl Input {
+impl Character {
   pub fn as_char(&self) -> char {
     match self {
-      Input::Digit(digit) => digit.as_char(),
-      Input::Decimal => '.',
+      Character::Digit(digit) => digit.as_char(),
+      Character::Decimal => '.',
     }
   }
 }
 
-impl Display for Input {
+impl Display for Character {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     write!(f, "{}", self.as_char())
   }

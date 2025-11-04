@@ -1,7 +1,7 @@
 use rdev::{EventType, Key};
 use std::thread::sleep;
 use std::time::Duration;
-use supermarket_together_pricing_accessibility::input::{Digit, Input};
+use supermarket_together_pricing_accessibility::input::{Digit, Character};
 use supermarket_together_pricing_accessibility::keyboard::Keyboard;
 use supermarket_together_pricing_accessibility::price::Price;
 use supermarket_together_pricing_accessibility::{double, round_down, FIVE};
@@ -30,7 +30,7 @@ fn run() {
         Key::Num8 => Digit::Eight.into(),
         Key::Num9 => Digit::Nine.into(),
         Key::Num0 => Digit::Zero.into(),
-        Key::Comma | Key::Dot => Input::Decimal,
+        Key::Comma | Key::Dot => Character::Decimal,
         Key::Return => {
           let cents = price.as_cents();
           let new_cents = round_down(double(cents), FIVE);

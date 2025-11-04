@@ -1,4 +1,4 @@
-use crate::input::{Digit, Input};
+use crate::input::{Digit, Character};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign};
@@ -12,18 +12,18 @@ pub struct Price {
 impl Price {
   pub fn add<I>(&mut self, input: I)
   where
-    I: Into<Input>,
+    I: Into<Character>,
   {
     let _ = self.try_add(input);
   }
 
   pub fn try_add<I>(&mut self, input: I) -> Result<(), AddInputError>
   where
-    I: Into<Input>,
+    I: Into<Character>,
   {
     let input = input.into();
     match input {
-      Input::Digit(digit) => {
+      Character::Digit(digit) => {
         if let Some(decimal_part) = &mut self.decimal_part {
           if let Some(first_decimal_digit) = &mut decimal_part.first_decimal_digit {
             if first_decimal_digit.second_decimal_digit.is_some() {
@@ -38,7 +38,7 @@ impl Price {
           self.value.push(digit);
         }
       }
-      Input::Decimal => {
+      Character::Decimal => {
         if self.decimal_part.is_some() {
           return Err(AddInputError::DecimalAlreadyPresent);
         } else {
@@ -49,20 +49,20 @@ impl Price {
     Ok(())
   }
 
-  pub fn as_inputs(&self) -> Vec<Input> {
+  pub fn as_inputs(&self) -> Vec<Character> {
     let mut inputs = vec![];
     if self.value.is_empty() {
-      inputs.push(Input::from(Digit::Zero));
+      inputs.push(Character::from(Digit::Zero));
     } else {
-      inputs.append(&mut self.value.iter().map(|digit| Input::from(*digit)).collect());
+      inputs.append(&mut self.value.iter().map(|digit| Character::from(*digit)).collect());
     }
 
     if let Some(decimal_part) = &self.decimal_part {
       if let Some(first_decimal_digit) = &decimal_part.first_decimal_digit {
-        inputs.push(Input::Decimal);
-        inputs.push(Input::from(first_decimal_digit.digit));
+        inputs.push(Character::Decimal);
+        inputs.push(Character::from(first_decimal_digit.digit));
         if let Some(second_decimal_digit) = first_decimal_digit.second_decimal_digit {
-          inputs.push(Input::from(second_decimal_digit));
+          inputs.push(Character::from(second_decimal_digit));
         }
       }
     }
@@ -93,7 +93,7 @@ impl Price {
       cents /= 10;
 
       if inverse_inputs.len() == 2 {
-        inverse_inputs.push(Input::Decimal);
+        inverse_inputs.push(Character::Decimal);
       }
     }
 
@@ -108,7 +108,7 @@ impl Price {
 
 impl<I> Add<I> for Price
 where
-  I: Into<Input>,
+  I: Into<Character>,
 {
   type Output = Self;
 
@@ -120,7 +120,7 @@ where
 
 impl<I> AddAssign<I> for Price
 where
-  I: Into<Input>,
+  I: Into<Character>,
 {
   fn add_assign(&mut self, rhs: I) {
     Price::add(self, rhs);
@@ -196,7 +196,7 @@ impl From<Digit> for FirstDecimalDigit {
 
 #[cfg(test)]
 mod test_price {
-  use crate::input::{Digit, Input};
+  use crate::input::{Digit, Character};
   use crate::price::{AddInputError, DecimalPart, FirstDecimalDigit, Price};
 
   macro_rules! assert_no_price_change {
@@ -231,7 +231,7 @@ mod test_price {
       },
       price
     );
-    price.try_add(Input::Decimal).expect("add decimal");
+    price.try_add(Character::Decimal).expect("add decimal");
     assert_eq!(
       Price {
         value: vec![Digit::Zero],
@@ -281,10 +281,10 @@ mod test_price {
   fn test_as_inputs() {
     assert_eq!(
       vec![
-        Input::from(Digit::Zero),
-        Input::Decimal,
-        Input::from(Digit::Four),
-        Input::from(Digit::Two)
+        Character::from(Digit::Zero),
+        Character::Decimal,
+        Character::from(Digit::Four),
+        Character::from(Digit::Two)
       ],
       Price {
         value: vec![],

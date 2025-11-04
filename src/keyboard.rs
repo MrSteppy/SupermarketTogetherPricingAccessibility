@@ -1,4 +1,4 @@
-use crate::input::{Digit, Input};
+use crate::input::{Digit, Character};
 use enigo::{Direction, Enigo, Key, Settings};
 use std::thread::sleep;
 use std::time::Duration;
@@ -16,11 +16,11 @@ impl Keyboard {
 
   pub fn type_on_numpad<I>(&mut self, input: I) -> Result<(), String>
   where
-    I: Into<Input>,
+    I: Into<Character>,
   {
     let input = input.into();
     let key = match input {
-      Input::Digit(digit) => match digit {
+      Character::Digit(digit) => match digit {
         Digit::Zero => Key::Numpad0,
         Digit::One => Key::Numpad1,
         Digit::Two => Key::Numpad2,
@@ -32,7 +32,7 @@ impl Keyboard {
         Digit::Eight => Key::Numpad8,
         Digit::Nine => Key::Numpad9,
       },
-      Input::Decimal => Key::Decimal,
+      Character::Decimal => Key::Decimal,
     };
     enigo::Keyboard::key(&mut self.enigo, key, Direction::Click)
       .map_err(|e| format!("failed to type {input}: {e}"))?;
