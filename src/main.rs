@@ -13,8 +13,6 @@ fn main() {
 }
 
 fn run() {
-  //TODO perform a check to make sure, that typing numpad enter doesn't trigger a normal enter input!
-  
   println!("Okay! Use num-keys 0-9, the comma key and regular enter to type a price.");
   println!("I will double that, round down to the next five cents and enter it on your numpad!");
   println!("Make sure your numpad is activated!");
