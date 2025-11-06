@@ -6,28 +6,37 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = import nixpkgs { inherit system; };
       in
       {
         devShells.default = pkgs.mkShell (
-        let
-          mingw = pkgs.pkgsCross.mingwW64;
-        in
-        {
-          nativeBuildInputs = with pkgs; [
-            pkg-config
-            mingw.stdenv.cc
-          ];
+          let
+            mingw = pkgs.pkgsCross.mingwW64;
+          in
+          {
+            nativeBuildInputs = with pkgs; [
+              pkg-config
+              mingw.stdenv.cc
+            ];
 
-          buildInputs = with pkgs; [
-            xorg.libX11
-            xorg.libXi
-            mingw.windows.mingw_w64_pthreads
-          ];
-        });
+            buildInputs = with pkgs; [
+              xorg.libX11
+              xorg.libXi
+              mingw.windows.mingw_w64_pthreads
+            ];
+          }
+        );
+
+        formatter = pkgs.nixfmt-rfc-style;
       }
     );
 }
