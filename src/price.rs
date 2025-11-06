@@ -223,7 +223,7 @@ mod test_price {
           price,
           assert_eq!(
             Err(AddInputError::DecimalAlreadyPresent),
-            price.try_add(Input::Decimal)
+            price.try_add(Character::Decimal)
           )
         );
       };

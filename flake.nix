@@ -8,6 +8,7 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    crane.url = "github:ipetkov/crane";
   };
 
   outputs =
@@ -16,6 +17,7 @@
       nixpkgs,
       flake-utils,
       rust-overlay,
+      crane,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -31,26 +33,35 @@
           ];
           targets = [ "x86_64-pc-windows-gnu" ];
         };
+        craneLib = crane.mkLib pkgs;
+        mingw = pkgs.pkgsCross.mingwW64;
+        nativeBuildInputs = with pkgs; [
+          rustToolchain
+          pkg-config
+          mingw.stdenv.cc
+        ];
+        buildInputs = with pkgs; [
+          xorg.libX11
+          xorg.libXi
+          mingw.windows.mingw_w64_pthreads
+        ];
       in
       {
-        devShells.default = pkgs.mkShell (
-          let
-            mingw = pkgs.pkgsCross.mingwW64;
-          in
-          {
-            nativeBuildInputs = with pkgs; [
-              rustToolchain
-              pkg-config
-              mingw.stdenv.cc
-            ];
+        packages = {
+          default = craneLib.buildPackage {
+            src = craneLib.cleanCargoSource ./.;
+            inherit nativeBuildInputs buildInputs;
+          };
+          supermarket-together-pricing-accessibility = self.packages.${system}.default;
+        };
 
-            buildInputs = with pkgs; [
-              xorg.libX11
-              xorg.libXi
-              mingw.windows.mingw_w64_pthreads
-            ];
-          }
-        );
+        overlays.default = final: prev: {
+          inherit (self.packages.${prev.system}) supermarket-together-pricing-accessibility;
+        };
+
+        devShells.default = pkgs.mkShell ({
+          inherit nativeBuildInputs buildInputs;
+        });
 
         formatter = pkgs.nixfmt-rfc-style;
       }
