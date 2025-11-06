@@ -6,7 +6,7 @@ use supermarket_together_pricing_accessibility::listener::listen;
 use supermarket_together_pricing_accessibility::price::Price;
 use supermarket_together_pricing_accessibility::{double, round_down, FIVE};
 
-const TYPING_DELAY: Duration = Duration::from_millis(100); 
+const TYPING_DELAY: Duration = Duration::from_millis(100);
 
 fn main() {
   run();
@@ -20,7 +20,7 @@ fn run() {
   let mut price = Price::default();
   let mut keyboard = Keyboard::new().expect("keyboard");
   let input_receiver = listen().expect("failed to setup listener");
-  
+
   while let Ok(input) = input_receiver.recv() {
     match input {
       Input::Char(char) => price += char,
@@ -31,7 +31,9 @@ fn run() {
 
         //type in new price on numpad
         for char in new_price.as_inputs() {
-          keyboard.type_on_numpad(char).expect(&format!("type {char}"));
+          keyboard
+            .type_on_numpad(char)
+            .expect(&format!("type {char}"));
           sleep(TYPING_DELAY);
         }
         keyboard.type_on_numpad(Input::Enter).expect("type enter");

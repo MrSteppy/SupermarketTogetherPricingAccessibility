@@ -1,4 +1,4 @@
-use crate::input::{Digit, Character};
+use crate::input::{Character, Digit};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign};
@@ -54,7 +54,13 @@ impl Price {
     if self.value.is_empty() {
       inputs.push(Character::from(Digit::Zero));
     } else {
-      inputs.append(&mut self.value.iter().map(|digit| Character::from(*digit)).collect());
+      inputs.append(
+        &mut self
+          .value
+          .iter()
+          .map(|digit| Character::from(*digit))
+          .collect(),
+      );
     }
 
     if let Some(decimal_part) = &self.decimal_part {
@@ -196,7 +202,7 @@ impl From<Digit> for FirstDecimalDigit {
 
 #[cfg(test)]
 mod test_price {
-  use crate::input::{Digit, Character};
+  use crate::input::{Character, Digit};
   use crate::price::{AddInputError, DecimalPart, FirstDecimalDigit, Price};
 
   macro_rules! assert_no_price_change {

@@ -1,7 +1,7 @@
-pub mod keyboard;
 pub mod input;
-pub mod price;
+pub mod keyboard;
 pub mod listener;
+pub mod price;
 
 use std::num::NonZeroU32;
 
