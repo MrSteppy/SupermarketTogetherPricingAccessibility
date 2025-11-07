@@ -82,16 +82,14 @@
           drv = smtpa;
         };
 
-        devShells.default = craneLib.devShell (
-
-          {
-            inputsFrom = [ smtpa ];
-          }
-        );
+        devShells.default = craneLib.devShell ({
+          inputsFrom = [ smtpa ];
+        });
 
         formatter = pkgs.nixfmt-rfc-style;
       }
-    ) // {
+    )
+    // {
       overlays.default = final: prev: {
         smtpa = self.packages.${prev.system}.default;
       };
