@@ -78,10 +78,6 @@
           windows = smtpaWindows;
         };
 
-        overlays.default = final: prev: {
-          inherit (self.packages.${prev.system}) smtpa;
-        };
-
         apps.default = flake-utils.lib.mkApp {
           drv = smtpa;
         };
@@ -95,5 +91,9 @@
 
         formatter = pkgs.nixfmt-rfc-style;
       }
-    );
+    ) // {
+      overlays.default = final: prev: {
+        smtpa = self.packages.${prev.system}.default;
+      };
+    };
 }
