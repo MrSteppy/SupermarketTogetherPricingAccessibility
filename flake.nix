@@ -90,8 +90,44 @@
       }
     )
     // {
-      overlays.default = final: prev: {
-        smtpa = self.packages.${prev.system}.default;
-      };
+      nixosModules.smtpa =
+        {
+          lib,
+          pkgs,
+          config,
+          ...
+        }:
+        let
+          cfg = config.programs.supermarketTogetherPricingAccessibility;
+        in
+        {
+          options.programs.supermarketTogetherPricingAccessibility = {
+            enable = lib.mkEnableOption "supermarketTogetherPricingAccessibility";
+            inputTest.enable = lib.mkEnableOption "inputTest";
+            package = lib.mkOption {
+              type = lib.types.package;
+              description = "Derivation to install for supermarketTogetherPricingAccessibility";
+              default = self.packages.${pkgs.system}.default;
+            };
+          };
+          config = lib.mkIf cfg.enable (
+            let
+              smtpa = pkgs.writeShellScriptBin "supermarket-together-pricing-accessibility" ''
+                #!${pkgs.runtimeShell}
+                exec ${cfg.package}/bin/supermarket_together_pricing_accessibility "$@"
+              '';
+              inputTest = pkgs.writeShellScriptBin "supermarket-together-pricing-accessibility-input-test" ''
+                #!${pkgs.runtimeShell}
+                exec ${cfg.package}/bin/input_test "$@"
+              '';
+            in
+            {
+              environment.systemPackages = [
+                smtpa
+              ]
+              ++ lib.optional cfg.inputTest.enable inputTest;
+            }
+          );
+        };
     };
 }
