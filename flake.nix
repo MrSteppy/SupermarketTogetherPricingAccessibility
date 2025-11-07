@@ -22,46 +22,76 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
+        overlays = [ rust-overlay.overlays.default ];
         pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ rust-overlay.overlays.default ];
+          inherit system overlays;
         };
-        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
-          extensions = [
-            "clippy"
-            "rustfmt"
-          ];
-          targets = [ "x86_64-pc-windows-gnu" ];
+        pkgsCross = import nixpkgs {
+          inherit system overlays;
+          crossSystem = {
+            config = "x86_64-w64-mingw32";
+          };
         };
-        craneLib = crane.mkLib pkgs;
-        mingw = pkgs.pkgsCross.mingwW64;
-        nativeBuildInputs = with pkgs; [
-          rustToolchain
-          pkg-config
-          mingw.stdenv.cc
-        ];
-        buildInputs = with pkgs; [
-          xorg.libX11
-          xorg.libXi
-          mingw.windows.mingw_w64_pthreads
-        ];
+
+        craneLib = (crane.mkLib pkgs).overrideToolchain (
+          p:
+          p.rust-bin.stable.latest.default.override {
+            extensions = [
+              "clippy"
+              "rustfmt"
+            ];
+            targets = [ "x86_64-pc-windows-gnu" ];
+          }
+        );
+        craneLibCross = (crane.mkLib pkgsCross).overrideToolchain (
+          p:
+          p.rust-bin.stable.latest.default.override {
+            targets = [ "x86_64-pc-windows-gnu" ];
+          }
+        );
+
+        smtpa = craneLib.buildPackage (
+          let
+            mingw = pkgs.pkgsCross.mingwW64;
+          in
+          {
+            src = craneLib.cleanCargoSource ./.;
+            nativeBuildInputs = with pkgs; [
+              pkg-config
+              mingw.stdenv.cc
+            ];
+            buildInputs = with pkgs; [
+              xorg.libX11
+              xorg.libXi
+              mingw.windows.mingw_w64_pthreads
+            ];
+          }
+        );
+        smtpaWindows = craneLibCross.buildPackage {
+          src = craneLib.cleanCargoSource ./.;
+          strictDeps = true;
+        };
       in
       {
         packages = {
-          default = craneLib.buildPackage {
-            src = craneLib.cleanCargoSource ./.;
-            inherit nativeBuildInputs buildInputs;
-          };
-          supermarket-together-pricing-accessibility = self.packages.${system}.default;
+          default = smtpa;
+          windows = smtpaWindows;
         };
 
         overlays.default = final: prev: {
-          inherit (self.packages.${prev.system}) supermarket-together-pricing-accessibility;
+          inherit (self.packages.${prev.system}) smtpa;
         };
 
-        devShells.default = pkgs.mkShell ({
-          inherit nativeBuildInputs buildInputs;
-        });
+        apps.default = flake-utils.lib.mkApp {
+          drv = smtpa;
+        };
+
+        devShells.default = craneLib.devShell (
+
+          {
+            inputsFrom = [ smtpa ];
+          }
+        );
 
         formatter = pkgs.nixfmt-rfc-style;
       }
